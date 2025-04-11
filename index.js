@@ -15,6 +15,7 @@ app.use(cors());
 app.use(express.static("public"));
 
 let users = {};
+const groups = {};
 
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
@@ -49,7 +50,38 @@ io.on("connection", (socket) => {
   });
 
   
+  // Join a group
+  socket.on("join_group", ({ userId, groupId }) => {
+    socket.join(groupId);
+    if (!groups[groupId]) {
+        groups[groupId] = [];
+    }
+    groups[groupId].push(userId);
+    console.log(`User ${userId} joined group ${groupId}`);
+    console.log(groups);
 
+    io.to(groupId).emit("join_group", `${userId} has joined the group.`);
+});
+
+
+// Leave a group
+socket.on("leave_group", ({ userId, groupId }) => {
+  socket.leave(groupId); // Remove user from the group room
+  if (groups[groupId]) {
+      groups[groupId] = groups[groupId].filter((id) => id !== userId); // Remove user from group list
+  }
+  console.log(`User ${userId} left group ${groupId}`);
+  console.log(groups);
+
+  io.to(groupId).emit("leave_group", `${userId} has left the group.`);
+});
+
+// group messages
+socket.on("group_message", ({ groupId, senderId, message }) => {
+  console.log(`Group message in ${groupId} from ${senderId}: ${message}`);
+
+  io.to(groupId).emit("group_message", { senderId, message });
+});
 
 
 
